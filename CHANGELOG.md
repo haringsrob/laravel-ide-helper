@@ -7,7 +7,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixes
 - Handle PHP 8.1 deprecation warnings when passing `null` to `new \ReflectionClass` [#1351 / mfn](https://github.com/barryvdh/laravel-ide-helper/pull/1351)
-- Add option `use_generics_annotations` for collection type hints [#1298 / tanerkay](https://github.com/barryvdh/laravel-ide-helper/pull/1298)
 
 2022-03-06, 2.12.3
 ------------------
