@@ -16,7 +16,7 @@ use Barryvdh\Reflection\DocBlock;
 use Barryvdh\Reflection\DocBlock\Context;
 use Barryvdh\Reflection\DocBlock\Serializer as DocBlockSerializer;
 use Barryvdh\Reflection\DocBlock\Tag;
-use Composer\Autoload\ClassMapGenerator;
+use Composer\ClassMapGenerator\ClassMapGenerator;
 use Doctrine\DBAL\Exception as DBALException;
 use Doctrine\DBAL\Types\Type;
 use Illuminate\Console\Command;
@@ -362,6 +362,10 @@ class ModelsCommand extends Command
                 $type = 'decimal';
             } elseif (Str::startsWith($type, 'custom_datetime:')) {
                 $type = 'date';
+            } elseif (Str::startsWith($type, 'date:')) {
+                $type = 'date';
+            } elseif (Str::startsWith($type, 'datetime:')) {
+                $type = 'date';
             } elseif (Str::startsWith($type, 'immutable_custom_datetime:')) {
                 $type = 'immutable_date';
             } elseif (Str::startsWith($type, 'encrypted:')) {
@@ -698,7 +702,10 @@ class ModelsCommand extends Command
                                     get_class($relationObj->getRelated())
                                 );
 
-                                if (strpos(get_class($relationObj), 'Many') !== false) {
+                                if (
+                                    strpos(get_class($relationObj), 'Many') !== false ||
+                                    ($this->getRelationReturnTypes()[$relation] ?? '') === 'many'
+                                ) {
                                     //Collection or array of models (because Collection is Arrayable)
                                     $relatedClass = '\\' . get_class($relationObj->getRelated());
                                     $collectionClass = $this->getCollectionClass($relatedClass);
@@ -723,7 +730,10 @@ class ModelsCommand extends Command
                                         // What kind of comments should be added to the relation count here?
                                         );
                                     }
-                                } elseif ($relation === 'morphTo') {
+                                } elseif (
+                                    $relation === 'morphTo' ||
+                                    ($this->getRelationReturnTypes()[$relation] ?? '') === 'morphTo'
+                                ) {
                                     // Model isn't specified because relation is polymorphic
                                     $this->setProperty(
                                         $method,
@@ -1089,6 +1099,14 @@ class ModelsCommand extends Command
     }
 
     /**
+     * Returns the return types of relations
+     */
+    protected function getRelationReturnTypes(): array
+    {
+        return $this->laravel['config']->get('ide-helper.additional_relation_return_types', []);
+    }
+
+    /**
      * @return bool
      */
     protected function hasCamelCaseModelProperties()
@@ -1310,7 +1328,8 @@ class ModelsCommand extends Command
         $methodReflection = $castReflection->getMethod('get');
 
         return $this->getReturnTypeFromReflection($methodReflection) ??
-            $this->getReturnTypeFromDocBlock($methodReflection, $reflection);
+            $this->getReturnTypeFromDocBlock($methodReflection, $reflection) ??
+            'mixed';
     }
 
     /**
